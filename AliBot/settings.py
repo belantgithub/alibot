@@ -25,7 +25,10 @@ SECRET_KEY = 'y!%t3*bhl5w5yb_jm6mj60o11fi)(z0*37d8=5+09mfoehj@%h'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'belant-bot.ru',
+    '127.0.0.1',
+]
 
 
 # Application definition

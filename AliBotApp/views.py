@@ -2,6 +2,7 @@
 
 import json
 import logging
+import re
 
 import telepot
 from django.template.loader import render_to_string
@@ -24,6 +25,10 @@ def _start_bot():
     return render_to_string('start.md')
 
 
+def _add_razbor_message():
+    return render_to_string('add.md')
+
+
 # def _display_planetpy_feed():
 #     return render_to_string('feed.md', {'items': parse_planetpy_rss()})
 
@@ -35,7 +40,8 @@ class CommandReceiveView(View):
 
         commands = {
             '/start': _display_help,
-            'help': _display_help,
+            '/add': _add_razbor_message,
+            '/help': _display_help,
         }
 
         raw = request.body.decode('utf-8')
@@ -47,13 +53,20 @@ class CommandReceiveView(View):
             return HttpResponseBadRequest('invalid request body')
         else:
             chat_id = payload['message']['chat']['id']
-            cmd = payload['message'].get('text')  # command
-
-            func = commands.get(cmd.split()[0].lower())
-            if func:
-                TelegramBot.sendMessage(chat_id, func(), parse_mode='Markdown')
+            message = payload['message'].get('text')
+            if type(message) is unicode:
+                func = commands.get(message.split()[0].lower(), 'no_command')
+                print(func)
+                if func != 'no_command':
+                    TelegramBot.sendMessage(chat_id, func(), parse_mode='Markdown')
+                else:
+                    if message.find(u'#разбор') != -1:
+                        func = commands.get('/add')
+                        TelegramBot.sendMessage(chat_id, func(), parse_mode='Markdown')
+                    else:
+                        TelegramBot.sendMessage(chat_id, 'I do not understand you, Sir!')
             else:
-                TelegramBot.sendMessage(chat_id, 'I do not understand you, Sir!')
+                TelegramBot.sendMessage(chat_id, 'It is not a text message')
 
         return JsonResponse({}, status=200)
 
