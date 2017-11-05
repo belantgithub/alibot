@@ -1,8 +1,9 @@
 # -*- coding: utf8 -*-
 
 import json
-import logging
 import re
+import logging
+from models import TelegramUsers, Channels, Analysis
 
 import telepot
 from django.template.loader import render_to_string
@@ -24,9 +25,35 @@ def _display_help():
 def _start_bot():
     return render_to_string('start.md')
 
+def _get_analisys():
+    return render_to_string('')
 
-def _add_razbor_message():
-    return render_to_string('add.md')
+def _add_razbor_message(message):
+    username = message['from'].get('username')
+    try:
+        telegram_user = TelegramUsers.objects.get(username__iexact=username)
+    except:
+        telegram_user = TelegramUsers.objects.create(username=username)
+
+    try:
+        analysis = Analysis.objects.create(author=telegram_user, analysis=message.get('text'))
+        print(analysis.analysis)
+    except:
+        print(u'bla')
+
+    regex = ur"#[Рр]азбор_(.*?)[\s]"
+    matches = re.finditer(regex, analysis.analysis)
+    for matchNum, match in enumerate(matches):
+        if matchNum == 0:
+            channel_name = match.group(1)
+
+
+    dict = {
+        'channel_name': channel_name,
+        'username': telegram_user.username,
+        'analysis_text': message.get('text'),
+    }
+    return render_to_string('add.md', dict)
 
 
 # def _display_planetpy_feed():
@@ -53,16 +80,18 @@ class CommandReceiveView(View):
             return HttpResponseBadRequest('invalid request body')
         else:
             chat_id = payload['message']['chat']['id']
+
             message = payload['message'].get('text')
             if type(message) is unicode:
                 func = commands.get(message.split()[0].lower(), 'no_command')
                 print(func)
+                print(type(payload['message']))
                 if func != 'no_command':
                     TelegramBot.sendMessage(chat_id, func(), parse_mode='Markdown')
                 else:
                     if message.find(u'#разбор') != -1:
                         func = commands.get('/add')
-                        TelegramBot.sendMessage(chat_id, func(), parse_mode='Markdown')
+                        TelegramBot.sendMessage(chat_id, func(payload['message']))
                     else:
                         TelegramBot.sendMessage(chat_id, 'I do not understand you, Sir!')
             else:
